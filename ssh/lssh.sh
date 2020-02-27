@@ -67,6 +67,10 @@ function getPrivateKey() {
     local response=$(curl -b ${COOKIE_FILE} -s ${privateKeyUrl})
 
     if  [[ "${response}" =~ "-----BEGIN RSA PRIVATE KEY-----"* ]] ; then
+        if [[ -e "${SSH_IDENTITY_FILE}" ]]; then 
+         rm "${SSH_IDENTITY_FILE}"
+        fi
+        
         echo "${response}" >> "${SSH_IDENTITY_FILE}"
         chmod 600 "${SSH_IDENTITY_FILE}"
         return 0
@@ -86,6 +90,11 @@ function parseError() {
 
 if ! [[ -x "$(command -v jq)" ]]; then
   echo 'Error: jq (JSON parser) is not installed. Install with: sudo apt install jq' >&2
+  exit 1
+fi
+
+if [[ "${DEVICE_ID}" = "" ]]; then
+  echo 'No Device ID specified' >&2
   exit 1
 fi
 
