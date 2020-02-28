@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DEVICE_ID=$1
+LOCAL=$2
 SERVER="lunixo.com"
 AUTH_URL="https://${SERVER}/api/security/authentication"
 COOKIE_FILE="lunixo-auth"
@@ -9,7 +10,7 @@ DEVICE=""
 LOCATION_ID=""
 SSH_USER="root"
 SSH_SERVER=""
-SSH_PORT=""
+SSH_PORT=22
 
 function getAuthentication() {
     local userName=$(curl -b ${COOKIE_FILE} -s ${AUTH_URL} | jq -r '.user.userName')
@@ -50,9 +51,13 @@ function getDevice() {
     echo "Connecting to device $(jq -r '.device.name' <<< ${DEVICE}) (ID: $(jq -r '.device.id' <<< ${DEVICE}), Location: $(jq -r '.location.name' <<< ${DEVICE}))"
     
     LOCATION_ID=$(jq -r '.location.id' <<< ${DEVICE})
-    SSH_SERVER=$(jq -r '.device.deviceMaintenance.maintenanceServer' <<< ${DEVICE})
-    SSH_PORT=$(jq -r '.device.deviceMaintenance.maintenancePort' <<< ${DEVICE})
-    
+    if [[ ${LOCAL} == 'local' || ${LOCAL} == 'l' ]]; then
+        SSH_SERVER=$(echo $(jq -r '.device.deviceDetails.localIpV4Addresses' <<< ${DEVICE}) | awk -F, '{print $1}')
+    else
+        SSH_SERVER=$(jq -r '.device.deviceMaintenance.maintenanceServer' <<< ${DEVICE})
+        SSH_PORT=$(jq -r '.device.deviceMaintenance.maintenancePort' <<< ${DEVICE})
+    fi
+        
     if [[ ${SSH_SERVER} == 'null' ]]; then
         echo "SSH Configuration does not exist for the device. SSH may be disabled or not supported by the device."
         exit 1
