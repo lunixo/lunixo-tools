@@ -13,3 +13,13 @@ __Connect over SSH Gateway:__
 __Connect directly over LAN:__
 
 ./lssh.sh \<Device ID\> l
+
+# lscp.sh
+
+__Copy folder to device__
+
+./lscp.sh \<Device ID\> \<Local Source Path\> \<Remote Target Path\>
+
+__Copy folder to device over LAN__
+
+./lscp.sh \<Device ID\> \<Local Source Path\> \<Remote Target Path\> l
