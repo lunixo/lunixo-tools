@@ -45,7 +45,7 @@ function authenticate() {
 }
 
 function getDevice() {
-    local deviceUrl="http://${SERVER}/api/devices/${DEVICE_ID}"
+    local deviceUrl="https://${SERVER}/api/devices/${DEVICE_ID}"
     local response=$(curl -b ${COOKIE_FILE} -s ${deviceUrl})
     parseError "${response}" "Failed to get device"
     DEVICE="${response}"
@@ -53,14 +53,13 @@ function getDevice() {
     echo "Connecting to device $(jq -r '.device.name' <<< ${DEVICE}) (ID: $(jq -r '.device.id' <<< ${DEVICE}), Location: $(jq -r '.location.name' <<< ${DEVICE}))"
     
     LOCATION_ID=$(jq -r '.location.id' <<< ${DEVICE})
-    
     if [[ ${LOCAL} == 'local' || ${LOCAL} == 'l' ]]; then
         SSH_SERVER=$(echo $(jq -r '.device.deviceDetails.localIpV4Addresses' <<< ${DEVICE}) | awk -F, '{print $1}')
     else
         SSH_SERVER=$(jq -r '.device.deviceMaintenance.maintenanceServer' <<< ${DEVICE})
         SSH_PORT=$(jq -r '.device.deviceMaintenance.maintenancePort' <<< ${DEVICE})
     fi
-    
+        
     if [[ ${SSH_SERVER} == 'null' ]]; then
         echo "SSH Configuration does not exist for the device. SSH may be disabled or not supported by the device."
         exit 1
@@ -71,7 +70,7 @@ function getDevice() {
 
 function getPrivateKey() {
     local locationId=$(jq -r '.location.id' <<< ${DEVICE})
-    local privateKeyUrl="http://${SERVER}/api/locations/${LOCATION_ID}/devices/${DEVICE_ID}/maintenance/privateKey/download"
+    local privateKeyUrl="https://${SERVER}/api/locations/${LOCATION_ID}/devices/${DEVICE_ID}/maintenance/privateKey/download"
     local response=$(curl -b ${COOKIE_FILE} -s ${privateKeyUrl})
 
     if  [[ "${response}" =~ "-----BEGIN RSA PRIVATE KEY-----"* ]] ; then
