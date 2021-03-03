@@ -112,6 +112,7 @@ fi
 
 getDevice
 getPrivateKey
+trap 'rm -f "${SSH_IDENTITY_FILE}"' EXIT
 
 scp -r -P "${SSH_PORT}" -i "${SSH_IDENTITY_FILE}" "${LOCAL_PATH}" "${SSH_USER}@${SSH_SERVER}:${TARGET_PATH}"
-rm "${SSH_IDENTITY_FILE}"
+rm -f "${SSH_IDENTITY_FILE}"

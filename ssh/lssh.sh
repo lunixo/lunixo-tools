@@ -109,6 +109,7 @@ fi
 
 getDevice
 getPrivateKey
+trap 'rm -f "${SSH_IDENTITY_FILE}"' EXIT
 
-ssh "${SSH_USER}@${SSH_SERVER}" -p "${SSH_PORT}" -i "${SSH_IDENTITY_FILE}"
-rm "${SSH_IDENTITY_FILE}"
+ssh "${SSH_USER}@${SSH_SERVER}" -p "${SSH_PORT}" -i "${SSH_IDENTITY_FILE}" -o ServerAliveInterval=60
+rm -f "${SSH_IDENTITY_FILE}"
