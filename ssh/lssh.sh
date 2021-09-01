@@ -111,5 +111,5 @@ getDevice
 getPrivateKey
 trap 'rm -f "${SSH_IDENTITY_FILE}"' EXIT
 
-ssh "${SSH_USER}@${SSH_SERVER}" -p "${SSH_PORT}" -i "${SSH_IDENTITY_FILE}" -o ServerAliveInterval=60
+ssh "${SSH_USER}@${SSH_SERVER}" -p "${SSH_PORT}" -i "${SSH_IDENTITY_FILE}" -o ServerAliveInterval=60 -L 9222:localhost:9222
 rm -f "${SSH_IDENTITY_FILE}"
