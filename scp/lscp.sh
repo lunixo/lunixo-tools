@@ -27,11 +27,13 @@ function getAuthentication() {
 function authenticate() {
     read -p 'E-Mail: ' email
     read -sp 'Password: ' password
-
+    printf '\n'
+    read -p '2FA Token: ' twoFacAuthCode
+    
     local error=$(curl -c ${COOKIE_FILE} -s \
           --header "Content-Type: application/json" \
           --request POST \
-          --data "{\"email\":\"${email}\",\"password\":\"${password}\"}" \
+          --data "{\"email\":\"${email}\",\"password\":\"${password}\",\"twoFacAuthCode\":\"${twoFacAuthCode}\"}" \
           ${AUTH_URL} |  jq -r  '.message')
 
     printf '\n'
