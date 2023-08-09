@@ -1,7 +1,7 @@
 # lssh.sh
 
 __Supported Platforms:__
-* Ubuntu 20.04
+* Ubuntu 20.04, 22.04
 
 __Prerequisites:__
 * jq (JSON parser), install with: sudo apt install jq
