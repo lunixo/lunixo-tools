@@ -1,7 +1,17 @@
 #!/bin/bash
 
-DEVICE_ID=$1
-LOCAL=$2
+# -l connects directly over LAN, it can be placed anywhere in the arguments.
+LOCAL=0
+ARGS=()
+for arg in "$@"; do
+    if [[ ${arg} == '-l' ]]; then
+        LOCAL=1
+    else
+        ARGS+=("${arg}")
+    fi
+done
+
+DEVICE_ID=${ARGS[0]}
 SERVER="lunixo.com"
 AUTH_URL="https://${SERVER}/api/security/authentication"
 COOKIE_FILE="lunixo-auth"
@@ -11,6 +21,10 @@ LOCATION_ID=""
 SSH_USER="root"
 SSH_SERVER=""
 SSH_PORT=22
+SSH_OPTIONS=()
+IS_TUNNEL=0
+TUNNEL_TOKEN=""
+TUNNEL_URL=""
 
 function getAuthentication() {
     local userName=$(curl -b ${COOKIE_FILE} -s ${AUTH_URL} | jq -r '.user.userName')
@@ -52,7 +66,7 @@ function getDevice() {
     echo "Connecting to device $(jq -r '.device.name' <<< ${DEVICE}) (ID: $(jq -r '.device.id' <<< ${DEVICE}), Location: $(jq -r '.location.name' <<< ${DEVICE}))"
     
     LOCATION_ID=$(jq -r '.location.id' <<< ${DEVICE})
-    if [[ ${LOCAL} == 'local' || ${LOCAL} == 'l' ]]; then
+    if [[ ${LOCAL} == 1 ]]; then
         SSH_SERVER=$(echo $(jq -r '.device.deviceDetails.localIpV4Addresses' <<< ${DEVICE}) | awk -F, '{print $1}')
     else
         SSH_SERVER=$(jq -r '.device.deviceMaintenance.maintenanceServer' <<< ${DEVICE})
@@ -64,7 +78,42 @@ function getDevice() {
         exit 1
     fi
     
-    echo "SSH Server: ${SSH_SERVER}:${SSH_PORT}"
+    # Devices using the WebSocket tunnel report the tunnel server instead of the SSH gateway.
+    if [[ ${SSH_SERVER} == ws://* || ${SSH_SERVER} == wss://* ]]; then
+        IS_TUNNEL=1
+        echo "SSH Tunnel: ${SSH_SERVER}"
+    else
+        echo "SSH Server: ${SSH_SERVER}:${SSH_PORT}"
+    fi
+}
+
+function getTunnelToken() {
+    local tokenUrl="https://${SERVER}/api/locations/${LOCATION_ID}/devices/${DEVICE_ID}/maintenance/tunnel/clientToken"
+    local response=$(curl -b ${COOKIE_FILE} -s --request POST ${tokenUrl})
+    parseError "${response}" "Failed to get SSH tunnel token"
+
+    # The token is valid for 5 minutes, it is only needed to open the connection.
+    TUNNEL_TOKEN=$(jq -r '.token' <<< ${response})
+    TUNNEL_URL=$(jq -r '.url' <<< ${response})
+}
+
+function checkWebsocat() {
+    if [[ ${IS_TUNNEL} == 1 ]] && ! [[ -x "$(command -v websocat)" ]]; then
+        echo 'Error: websocat is not installed, it is required for devices using the WebSocket tunnel. Download from: https://github.com/vi/websocat/releases' >&2
+        exit 1
+    fi
+}
+
+function setSshOptions() {
+    SSH_OPTIONS=(-i "${SSH_IDENTITY_FILE}")
+    if [[ ${IS_TUNNEL} == 1 ]]; then
+        getTunnelToken
+        # The device is reached through websocat, the host name only identifies its key in known_hosts.
+        SSH_SERVER="lunixo-device-${DEVICE_ID}"
+        SSH_OPTIONS+=(-o "ProxyCommand=websocat --binary -H='Authorization: Bearer ${TUNNEL_TOKEN}' '${TUNNEL_URL}'")
+    else
+        SSH_OPTIONS+=(-o "Port=${SSH_PORT}")
+    fi
 }
 
 function getPrivateKey() {
@@ -109,8 +158,10 @@ if ! getAuthentication; then
 fi
 
 getDevice
+checkWebsocat
 getPrivateKey
 trap 'rm -f "${SSH_IDENTITY_FILE}"' EXIT
+setSshOptions
 
-ssh "${SSH_USER}@${SSH_SERVER}" -p "${SSH_PORT}" -i "${SSH_IDENTITY_FILE}" -o ServerAliveInterval=60 -L 9222:localhost:9222
+ssh "${SSH_USER}@${SSH_SERVER}" "${SSH_OPTIONS[@]}" -o ServerAliveInterval=60 -L 9222:localhost:9222
 rm -f "${SSH_IDENTITY_FILE}"

@@ -5,6 +5,9 @@ __Supported Platforms:__
 
 __Prerequisites:__
 * jq (JSON parser), install with: sudo apt install jq
+* websocat, for devices using the WebSocket tunnel: download the binary for your platform from https://github.com/vi/websocat/releases, e.g. websocat.x86_64-unknown-linux-musl, and install it as /usr/local/bin/websocat (chmod +x)
+
+The scripts detect devices using the WebSocket tunnel and connect through websocat automatically. Older devices are connected over the SSH Gateway.
 
 __Connect over SSH Gateway:__
 
@@ -12,7 +15,7 @@ __Connect over SSH Gateway:__
 
 __Connect directly over LAN:__
 
-./lssh.sh \<Device ID\> l
+./lssh.sh -l \<Device ID\>
 
 # lscp.sh
 
@@ -22,4 +25,4 @@ __Copy folder to device__
 
 __Copy folder to device over LAN__
 
-./lscp.sh \<Device ID\> \<Local Source Path\> \<Remote Target Path\> l
+./lscp.sh -l \<Device ID\> \<Local Source Path\> \<Remote Target Path\>
